@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>瀑布流</title>
+	<meta charset="utf-8">
+	<style type="text/css">
+	body {
+		margin: 0;
+	}
+	.waterfall {
+		position: relative;
+		height: 50px;
+	}
+	.waterfall>.waterfall-item {
+		position: absolute;
+		left: 0;
+		top: 0;
+		visibility: hidden;
+	}
+	.waterfall>.waterfall-item.show {
+		visibility: visible;
+	}
+	.waterfall>.waterfall-item>.waterfall-item-img {
+		display: block;
+		width: 100%;
+	}
+	.waterfall>.loading {
+		position: absolute;
+		width: 100%;
+		bottom: 0;
+		text-align: center;
+	}
+	.waterfall>.loading.hide {
+		display: none;
+	}
+	.waterfall>.loading>img {
+		display: block;
+		margin: 0 auto;
+		width: 50px;
+	}
+	</style>
+</head>
+<body>
+<div class="waterfall">
+	<div class="waterfall-item">
+		<img class="waterfall-item-img" src="img/girl-1.jpg">
+	</div>
+	<div class="waterfall-item">
+		<img class="waterfall-item-img" src="img/girl-2.jpg">
+	</div>
+	<div class="waterfall-item">
+		<img class="waterfall-item-img" src="img/girl-3.jpg">
+	</div>
+	<div class="waterfall-item">
+		<img class="waterfall-item-img" src="img/girl-4.jpg">
+	</div>
+	<!-- <div class="waterfall-item">
+		<img class="waterfall-item-img" src="img/girl-5.jpg">
+	</div>
+	<div class="waterfall-item">
+		<img class="waterfall-item-img" src="img/girl-6.jpg">
+	</div>
+	<div class="waterfall-item">
+		<img class="waterfall-item-img" src="img/girl-7.jpg">
+	</div>
+	<div class="waterfall-item">
+		<img class="waterfall-item-img" src="img/girl-8.jpg">
+	</div>
+	<div class="waterfall-item">
+		<img class="waterfall-item-img" src="img/girl-9.jpg">
+	</div> -->
+	<div class="loading">
+		<img src="img/loading.gif">
+	</div>
+</div>
+<script type="text/javascript" src="js/jquery-1.11.3.js"></script>
+<script type="text/javascript">
+	function Waterfall(columns, waterfallItemMargin){
+		this.columns = columns ? columns : 2;
+		this.waterfallItemMargin = waterfallItemMargin ? waterfallItemMargin : 0;
+		this.columnHeights = [];
+		for(var i=0; i<this.columns; i++){
+			this.columnHeights.push(0);
+		}
+		this.$waterfall = $('.waterfall');
+		this.waterfallWidth = this.$waterfall.width();
+		this.$waterfallItems = $('.waterfall>.waterfall-item');
+		this.waterfallItemsLength = this.$waterfallItems.length;
+		this.$waterfallItemImgs = $('.waterfall>.waterfall-item .waterfall-item-img');
+		this.$loading = $('.waterfall>.loading');
+		this.waterfallItemWidth = Math.floor(this.$waterfall.width() / this.columns) - 2 * this.waterfallItemMargin;console.log(this.$waterfall.width());
+		this.$waterfallItems.width(this.waterfallItemWidth);
+
+		var p = setInterval(() => {
+			var allImgHasHeight = true;
+			for(var j=0; j<this.$waterfallItemImgs.length; j++){
+				if($(this.$waterfallItemImgs[j]).height()){
+					allImgHasHeight = allImgHasHeight && true;
+				}else{
+					allImgHasHeight = allImgHasHeight && false;
+					break;
+				}
+			}
+			if(allImgHasHeight){
+				this.$loading.addClass('hide');
+				this.$waterfallItems.addClass('show');
+				this.init();
+				clearInterval(p);
+			}	
+		}, 100);
+
+		window.onresize = () => {
+			this.reset(true);
+		};
+	}
+
+	Waterfall.prototype.init = function(scrollBar){
+		console.log('.waterfall-item都有高了');
+		this.$waterfallItems.each((index, item) => {
+			var minHeightIndex = 0;
+			for(var i=1; i<this.columnHeights.length; i++){
+				if(this.columnHeights[i] < this.columnHeights[minHeightIndex]){
+					minHeightIndex = i;
+				}
+			}
+			$(item).css({
+				'left': `${minHeightIndex * (this.waterfallItemWidth + 2 * this.waterfallItemMargin) + this.waterfallItemMargin}px`,
+				'top': `${this.columnHeights[minHeightIndex] + this.waterfallItemMargin}px`
+			});
+			this.columnHeights[minHeightIndex] += $(item).height() + 2 * this.waterfallItemMargin;
+		});
+		var maxHeightIndex = 0;
+		for(var i=1; i<this.columnHeights.length; i++){
+			if(this.columnHeights[i] > this.columnHeights[maxHeightIndex]){
+				minHeightIndex = i;
+			}
+		}
+		this.$waterfall.height(this.columnHeights[maxHeightIndex]);
+		if(!scrollBar && this.$waterfall.width() != this.waterfallWidth){
+			this.reset();
+		}
+	}
+
+	Waterfall.prototype.refresh = function(){
+		this.$loading.removeClass('hide');
+		this.$newWaterfallItems = $(`.waterfall>.waterfall-item:gt(${this.waterfallItemsLength - 1})`);
+		this.$newWaterfallItems.width(this.waterfallItemWidth);
+		var minHeightIndex = 0;
+		for(var i=1; i<this.columnHeights.length; i++){
+			if(this.columnHeights[i] < this.columnHeights[minHeightIndex]){
+				minHeightIndex = i;
+			}
+		}
+		this.$newWaterfallItems.css({
+			'left': `${minHeightIndex * (this.waterfallItemWidth + 2 * this.waterfallItemMargin) + this.waterfallItemMargin}px`,
+			'top': `${this.columnHeights[minHeightIndex] + this.waterfallItemMargin}px`
+		});
+		this.$newWaterfallItemImgs = $(`.waterfall>.waterfall-item:gt(${this.waterfallItemsLength - 1}) .waterfall-item-img`);
+		var p = setInterval(() => {
+			var allNewImgHasHeight = true;
+			for(var j=0; j<this.$newWaterfallItemImgs.length; j++){
+				if($(this.$newWaterfallItemImgs[j]).height()){
+					allNewImgHasHeight = allNewImgHasHeight && true;
+				}else{
+					allNewImgHasHeight = allNewImgHasHeight && false;
+					break;
+				}
+			}
+			if(allNewImgHasHeight){
+				this.$loading.addClass('hide');
+				this.$newWaterfallItems.addClass('show');
+				this.$newWaterfallItems.each((index, item) => {
+					var minHeightIndex = 0;
+					for(var i=1; i<this.columnHeights.length; i++){
+						if(this.columnHeights[i] < this.columnHeights[minHeightIndex]){
+							minHeightIndex = i;
+						}
+					}
+					$(item).css({
+						'left': `${minHeightIndex * (this.waterfallItemWidth + 2 * this.waterfallItemMargin) + this.waterfallItemMargin}px`,
+						'top': `${this.columnHeights[minHeightIndex] + this.waterfallItemMargin}px`
+					});
+					this.columnHeights[minHeightIndex] += $(item).height() + 2 * this.waterfallItemMargin;
+				});
+				this.$waterfallItems = $('.waterfall>.waterfall-item');
+				this.waterfallItemsLength = this.$waterfallItems.length;
+				this.$waterfallItemImgs = $('.waterfall>.waterfall-item .waterfall-item-img');
+				var maxHeightIndex = 0;
+				for(var i=1; i<this.columnHeights.length; i++){
+					if(this.columnHeights[i] > this.columnHeights[maxHeightIndex]){
+						minHeightIndex = i;
+					}
+				}
+				this.$waterfall.height(this.columnHeights[maxHeightIndex]);
+				if(this.$waterfall.width() != this.waterfallWidth){
+					this.reset();
+				}
+				clearInterval(p);
+			}	
+		}, 100);
+	}
+
+	Waterfall.prototype.reset = function(scrollBar){
+		this.waterfallWidth = this.$waterfall.width();
+		this.$waterfall.removeAttr("style");
+		this.$waterfallItems.removeAttr("style");
+		this.columnHeights = [];
+		for(var i=0; i<this.columns; i++){
+			this.columnHeights.push(0);
+		}
+		this.waterfallItemWidth = Math.floor(this.waterfallWidth / this.columns) - 2 * this.waterfallItemMargin;
+		this.$waterfallItems.width(this.waterfallItemWidth);
+		this.init(scrollBar);
+	}
+
+	var waterfall = new Waterfall(2, 15);
+
+	window.setTimeout(() => {
+		var html = `
+			<div class="waterfall-item">
+				<img class="waterfall-item-img" src="img/girl-5.jpg">
+			</div>
+			<div class="waterfall-item">
+				<img class="waterfall-item-img" src="img/girl-6.jpg">
+			</div>
+			<div class="waterfall-item">
+				<img class="waterfall-item-img" src="img/girl-7.jpg">
+			</div>
+			<div class="waterfall-item">
+				<img class="waterfall-item-img" src="img/girl-8.jpg">
+			</div>
+			<div class="waterfall-item">
+				<img class="waterfall-item-img" src="img/girl-9.jpg">
+			</div>
+		`;
+		$('.waterfall>.loading').before($(html));
+		waterfall.refresh();
+	}, 5000);
+</script>
+</body>
+</html>
